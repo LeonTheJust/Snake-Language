@@ -589,109 +589,6 @@ parser0 g s x stack ast inpt s2 p
   | top stack `elem` getTerminals && s!!x == top stack = parser0 g s (x + 1) (pop2 stack) ast inpt s2 p-- match anything else 
   | otherwise = error ("Syntax error at input" ++ show (s) ++ " " ++ "at" ++ "`" ++ (s!!x) ++ "`")
 
-parser0_debug :: Grammar -> [String] -> Int -> Stack String -> Stack AST -> Stack String -> [String] -> [ParsingTable] -> AST
-parser0_debug g s x stack ast inpt s2 p =
-  trace dbgMsg $
-  case () of
-
-    _
-      | top stack == "" ->
-          parser0_debug g s x (pop2 stack) ast inpt s2 p
-
-      | top stack == "$" && x >= length s ->
-          trace "ACCEPT (EOF)" $ top ast
-
-      | top stack == "$" && x < length s && s!!x == "$" ->
-          trace ("ACCEPT ($)" ++ show ast) $ top ast
-
- --   --| top stack == "MS" -> parser0_debg g s x 
-  --   (pop2 stack) (pop2 ast) inpt s2 p (finalast ++ [fst (pop ast)])
-      | top stack == "MArr" -> parser0_debug g s x (pop2 stack) (combine ast (fst (pop stack))  (top inpt)) ( inpt) s2 p
-
-      | isMarker (top stack) ->
-          parser0_debug g s x (pop2 stack)
-            (combine ast (fst (pop stack)) (top inpt))
-            (pop2 inpt) s2 p
-
-      | x < length s && s!!x == "" ->
-          parser0_debug g s (x + 1) stack ast inpt s2 p
-
-      | top stack == "$" && x < length s && s!!x == "" ->
-          top ast
-
-      | top stack `elem` getNonTerminals &&
-        x < length s && s!!x == "$" &&
-        not (null rule) ->
-          parser0_debug g s x (pop2 stack) ast inpt s2 p
-
-      | top stack `elem` getNonTerminals &&
-        x < length s &&
-        not (null rule) ->
-          parser0_debug g s x
-            (addRule (pop2 stack) rule (length rule))
-            ast inpt s2 p
-
-      | top stack `elem` getNonTerminals &&
-        not (null ruleEps) ->
-          parser0_debug g s x (pop2 stack) ast inpt s2 p
-
-      | x >= length s ->
-          top ast
-
-      | top stack `elem` getTerminals && s!!x == top stack && (top stack == "endif" || top stack == "if" || top stack == "then" ) ->
-        parser0_debug g s (x + 1) (pop2 stack) ast inpt s2 p
-
-      | top stack `elem` getTerminals &&
-        s!!x == top stack && top stack == "str" ->
-          parser0_debug g s (x + 1) (pop2 stack)
-            (push (Str (s2!!x)) ast) inpt s2 p
-
-      | top stack `elem` getTerminals &&
-        s!!x == top stack && isNumber (s2!!x) ->
-          parser0_debug g s (x + 1) (pop2 stack)
-            (push (Num (read (s2!!x))) ast) inpt s2 p
-
-      | top stack `elem` getTerminals &&
-        s!!x == top stack && (isVar (s2!!x) || isFdef (s2!!x)) && (s2!!x) /= "length" && (s2!!x /= "do") && (s2!!x /= "random")->
-          parser0_debug g s (x + 1) (pop2 stack)
-            (push (Var (s2!!x)) ast) inpt s2 p
-     -- | top stack `elem` getTerminals && s!!x == top stack && (top stack == "[") ->
-    --    parser0_debug g s (x + 1) (pop2 stack) (push (Array []) ast) (push (s2!!x) inpt) s2 p
-
-      | top stack `elem` getTerminals &&
-        s!!x == top stack &&
-        (s!!x) `elem` ["+", "-", "*", "/", "print", "read", "=", "return", "length", "do", "import", "random"] ->
-          parser0_debug g s (x + 1) (pop2 stack)
-            ast (push (s2!!x) inpt) s2 p
-
-      | top stack `elem` getTerminals &&
-        s!!x == top stack ->
-          parser0_debug g s (x + 1) (pop2 stack) ast inpt s2 p
-
-      | otherwise ->
-          error ("Syntax error at `" ++ curTok ++ "` index=" ++ show x ++ show ast ++ show stack ++ " " ++ show stack)
-
-  where
-    curTok = if x < length s then s!!x else "EOF"
-
-    rule =
-      if x < length s
-      then findInParsinTable g (top stack) (s!!x) p 0
-      else []
-
-    ruleEps =
-      findInParsinTable g (top stack) "$" p 0
-
-    dbgMsg =
-      "\n--- STEP ---\n" ++
-      "Index: " ++ show x ++ "\n" ++
-      "Token: " ++ curTok ++ "\n" ++
-      "Top: " ++ top stack ++ "\n" ++
-      "Stack: " ++ show stack ++ "\n" ++
-      "AST: " ++ show ast ++ "\n" ++
-      "Input stack: " ++ show inpt ++ "\n" ++
-      "Rule: " ++ show rule ++ "\n"
-
 forceShow :: Show a => a -> String
 forceShow x = length (show x) `seq` show x
 
@@ -1266,7 +1163,7 @@ getCode mapp g p = do
     if s /= "end"  then do
         --print (charToStr (head s))
         let tokens = lexx (Prelude.tail s ++ " ") [Prelude.head s] False
-        print tokens
+        --print tokens
         let tokens2 = ((toStringArray (toSymbolAll tokens 0) 0 []))
         if "if" `elem` tokens2 && not ("endif" `elem` tokens2) then do
             x <- readMore
@@ -1277,7 +1174,7 @@ getCode mapp g p = do
             let stack2 = Stack []
             let stack3 = Stack []
             let ing = (parser0 g tokens4 0 stack stack2 stack3 (toStrArray tokens3 0) ) p
-            print ing
+            --print ing
             newmap <- compile ing (fst2 map) (snd2 map) (thrd2 map)
             getCode newmap g p
         else do
@@ -1298,7 +1195,7 @@ getCode mapp g p = do
             --print ((toStrArray tokens 0))
             --let ing = (parser0_debug g tokens2 0 stack stack2 stack3 )
             let ing = (parser0 g (tokens2 ++ ["$"]) 0 stack stack2 stack3 (toStrArray tokens 0) ) p
-            print (ing)
+            --print (ing)
             newmap <- compile ing (fst2 map) (snd2 map) (thrd2 map)
             --print (newmap)
             --print (newmap )
