@@ -1,0 +1,12 @@
+Math.Pow[x e] -> if 1 = 1 then do Math.PowHelp[x e x] return Math.PowHelp else print 'error' endif
+Math.PowHelp[x e y] ->if e = 1 then return x else x<- x * y e<- e - 1 do Math.PowHelp[x e y] return Math.PowHelp endif
+Math.ShiftLeft[x shamt] -> if shamt = 0 then return x else x<-x*2 shamt<- shamt - 1 do Math.ShiftLeft[x shamt] return Math.ShiftLeft endif
+Math.ShiftRight[x shamt] -> if shamt = 0 then return x else x<-x/2 shamt<- shamt - 1 do Math.ShiftRight[x shamt] return Math.ShiftRight endif
+Math.VectorMult[a b s] ->if length a = 1 then a<-a/0 b<-b/0 a<-s + a*b return a else tempa<- a/0 tempb<- b/0 s<- s + tempa*tempb a<-a*1 b<-b*1 do Math.VectorMult[a b s] return Math.VectorMult endif
+Math.IsEvenHelper[a] -> if 1 =1 then do Math.ShiftRight[a 1] temp<- Math.ShiftRight temp<- temp * 2 a<-a - temp return a else print 'error' endif
+Math.IsOdd[a] -> if 1 =1 then do Math.IsEvenHelper[a] return Math.IsEvenHelper else print 'wow' endif
+Math.Not[a] -> if a = 1 then return 0 else return 1 endif
+Math.IsEven[a] -> if 1 = 1 then do Math.IsOdd[a] a<-Math.IsOdd do Math.Not[a] return Math.Not else print 'not possible' endif
+Math.ModCompare[a b] -> if 1 = 1 then temp <- a /b temp<- temp * b return a - temp else print 'error' endif
+Math.Mod[a b] -> if 1 = 1 then do Math.ModCompare[a b] temp<-Math.ModCompare return temp else print 'error' endif
+Math.XOR[a b] -> if a = b then return 0 else return 1 endif

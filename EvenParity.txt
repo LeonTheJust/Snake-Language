@@ -1,0 +1,28 @@
+a<- [0] + [1] + [1] + [0] + [1]
+Count[signal i sum] -> if i = length signal then return sum else sum<- signal/i + sum i<- i + 1 do Count[signal i sum] return Count endif
+do Count [a 0 0]
+count <- Count
+import Math
+do Math.IsEven[count]
+iseven<-  Math.IsEven
+if iseven = 1 then a<- a + 0 else a<- a + 1 endif
+print a
+inpt <- random length a
+import Arrays
+t<- a/inpt
+do Math.Not[t]
+t<- Math.Not
+do Arrays.Change[a inpt t]
+print Arrays.Change
+a<-Arrays.Change
+do Count[a 0 0]
+count<- Count
+do Math.IsEven[count]
+temp<- Math.IsEven
+if temp = 1 then 
+print 'no error detected'
+else
+print 'error detected in signal:'
+print a
+endif
+end

@@ -1,0 +1,5 @@
+Arrays.Change[array element newvalue] -> if 1 = 1 then temparray <- [0] do Arrays.HelperChange[array element newvalue 0 temparray] temp <- Arrays.HelperChange return temp else print 'impossible' endif
+Arrays.HelperChange[array element newvalue count temparray] -> if count = element then array<- array*1 temparray <- temparray + newvalue temparray<- temparray + array temparray<- temparray*1 return temparray else temparray<- temparray + array/0 array<-array*1 count<- count + 1 do Arrays.HelperChange[array element newvalue count temparray] return Arrays.HelperChange endif
+Arrays.Delete[array element] -> if 1 = 1 then temparray <- [0] do Arrays.HelperDelete[array element 0 temparray] temp <- Arrays.HelperDelete return temp else print 'impossible' endif
+Arrays.HelperDelete[array element count temparray] -> if count = element then array<- array*1  temparray<- temparray + array temparray<- temparray*1 return temparray else temparray<- temparray + array/0 array<-array*1 count<- count + 1 do Arrays.HelperDelete[array element count temparray] return Arrays.HelperDelete endif
+Arrays.Empty[] -> if 1 =1 then a<- [1] a<-a*1 return a else print 'a' endif

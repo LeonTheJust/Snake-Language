@@ -1,0 +1,10 @@
+StdLib.Sum [x sum] -> if length x = 1 then return sum + x/0 else sum<- sum + x/0 x<-x*1 do StdLib.Sum[x sum] return StdLib.Sum endif
+StdLib.Fib[n] -> if n < 3 then return 1 else t<- n - 1 temp <- n - 2 do StdLib.Fib[t] t<-StdLib.Fib do StdLib.Fib[temp] temp<- StdLib.Fib return temp + t endif
+StdLib.Max[a b] -> if a > b then return a else return b endif
+StdLib.FindMaxx[a max] -> if length a = 1 then a<- a/0 do StdLib.Max[a max] return StdLib.Max else temp <- a /0 do StdLib.Max[temp max] max <- StdLib.Max a<- a*1 do StdLib.FindMaxx[a max] return StdLib.FindMaxx endif
+StdLib.FindMax[a] -> if 1 = 1 then do StdLib.FindMaxx[a -100000] return StdLib.FindMaxx else print 'impossible' endif
+StdLib.Min[a b] -> if a < b then return a else return b endif
+StdLib.FindMinn[a min] -> if length a = 1 then a<- a/0 do StdLib.Min[a min] return StdLib.Min else temp <- a /0 do StdLib.Min[temp min] min <- StdLib.Min a<- a*1 do StdLib.FindMinn[a max] return StdLib.FindMinn endif
+StdLib.FindMin[a] -> if 1 = 1 then do StdLib.FindMinn[a 100000] return StdLib.FindMinn else print 'impossible' endif
+StdLib.Factorial [n] -> if n = 0 then return 1 else t<- n - 1 do StdLib.Factorial[t] t<- StdLib.Factorial t<- t * n return t endif
+StdLib.Help[] -> if 1 = 1 then print 'StdLib.Factorial[Int n],                                   StdLib.FindMin[Int *a],                                                                                                                               StdLib.FindMax[Int *a],                                                              StdLib.Max[Ord a, Ord b] => return max{a,b},                                                  StdLib.Min[Ord a, Ord b] => return min{a,b},                                           StdLib.Fib[Int n] => return n-th Fibonacci number,                                           StdLib.Sum[Int *a, Int initial_sum (use 0 for the sum of the array a)] => return (sum{a} + initial_sum),                                                                      StdLib.Factorial[int n] => return n!' else print 'impossible' endif
