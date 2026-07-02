@@ -45,7 +45,7 @@ public class SnakeUI extends JFrame {
             System.out.println(compiler.exists());
             System.out.println(compiler.canExecute());
             ProcessBuilder pb =
-                    new ProcessBuilder(compiler + "/snakev");
+                    new ProcessBuilder(compiler + "/Snakev01");
             pb.directory(compiler);
             try {
                 Process p = pb.start();
