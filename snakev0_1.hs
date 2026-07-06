@@ -248,6 +248,7 @@ first g nont = frt g nont 0 0
    --     []
    -- else if 
 
+
 follow :: Grammar -> NonTerminal -> [Terminal]
 follow g nt =
     if nt == "S" then
@@ -272,6 +273,12 @@ follow g nt =
         ["]", "var", "num", "$"]
     else
         ["$"]
+
+followInArray :: Grammar -> [String] -> Int -> [String]
+followInArray g s x =
+    if x >= length s then
+        []
+    else (followInArray g s (x + 1) ++ follow g (s!!x))
 
 isFdef:: String -> Bool
 isFdef s
@@ -333,12 +340,6 @@ rest s x =
         []
     else
         ([s!!x] ++ rest s (x + 1))
-
-followInArray :: Grammar -> [String] -> Int -> [String]
-followInArray g s x =
-    if x >= length s then
-        []
-    else (followInArray g s (x + 1) ++ follow g (s!!x))
 
 toStrRule :: Rule -> [String]
 toStrRule (curr:symbols) 
@@ -809,6 +810,7 @@ eval (Less a b) map = case ( ((eval a map), (eval b map))) of
 eval (Equal a b) map = case ( ((eval a map), (eval b map))) of
     (Just (Arrays x) , Just (Arrays y)) -> Just (Bool (x == y))
     (Just (Int x),  Just (Int y)) -> Just (Bool (x == y))
+    (Just (String x), Just (String y))-> Just (Bool (x == y))
     (Just (Int x) , _) -> Just (Bool False)
     _ -> error (show ((eval a map), (eval b map)))
 eval (Length a) map = case (eval a map) of
@@ -1210,15 +1212,4 @@ main = do
     let g = grammar
     --print (toStringArray ((getRules g "expr" 0 [])!!0) 0 [])
     let p = createProdTable g getNonTerminals (Map.empty)
-    --print p
-    --let map = Map.insert "LenW" (Functs (If (Greater (Num 0) (Var "inpt")) (Assign (Var "length") (Var "length")) (Else (Block [Assign (Var "length") (Add (Var "length") (Num 1)),Assign (Var "inpt") (Mul (Var "inpt") (Num 1)),Do (Var "LenW")])))) Map.empty
-    --let map0 = Map.insert "Length" (Functs (Block [Assign (Var "length") (Num (-1)), Do (Var "LenW"), Free (Var "inpt")])) map
-    --let map1 = Map.insert "Min" (Functs (Block [Assign (Var "inpt1") (Var "inpt") ,Do (Var "Length") , Assign (Var "inpt") (Var "inpt1"), Free (Var "inpt1") ,If (Greater (Num 1) (Var "length")) (Assign (Var "min") (Var "min")) (Else (Block [Assign (Var "temp") (Div (Var "inpt") (Num 0)),If (Greater (Var "min") (Var "temp")) (Block [Assign (Var "min") (Div (Var "inpt") (Num 0)),Block [Assign (Var "inpt") (Mul (Var "inpt") (Num 1)),Do (Var "Min")]]) (Else (Block [Assign (Var "inpt") (Mul (Var "inpt") (Num 1)),Do (Var "Min")]))]))])) map0
-    --let map2 = Map.insert "FindMin" (Functs (Block [Assign (Var "min") (Num 1000000000) , Do (Var "Min"), Free (Var "inpt")])) map1
-    --let map3 = Map.insert "Max" (Functs (Block [Assign (Var "inpt1") (Var "inpt") ,Do (Var "Length") , Assign (Var "inpt") (Var "inpt1"), Free (Var "inpt1") ,If (Greater (Num 1) (Var "length")) (Assign (Var "max") (Var "max")) (Else (Block [Assign (Var "temp") (Div (Var "inpt") (Num 0)),If (Greater (Var "temp") (Var "max")) (Block [Assign (Var "max") (Div (Var "inpt") (Num 0)),Block [Assign (Var "inpt") (Mul (Var "inpt") (Num 1)),Do (Var "Max")]]) (Else (Block [Assign (Var "inpt") (Mul (Var "inpt") (Num 1)),Do (Var "Max")]))]))])) map2
-    --let map4 = Map.insert "FindMax" (Functs (Block [Assign (Var "max") (Num (-1000000000)) , Do (Var "Max"), Free (Var "inpt")])) map3
-   -- let map5 = Map.insert "Sum" (Functs (Block [Assign (Var "sum") (Num 0) , Do (Var "S/"), Free (Var "inpt")])) map4
-   -- let map6 = Map.insert "S/" (Functs (Block [Assign (Var "inpt1") (Var "inpt"), Do (Var "Length") ,Assign (Var "inpt") (Var "inpt1"), If (Greater (Num 1) (Var "length")) (Assign (Var "sum") (Var "sum")) (Else (Block [Assign (Var "sum") (Add (Var "sum") (Div (Var "inpt") (Num 0))) , Assign (Var "inpt") (Mul (Var "inpt") (Num 1)), Do (Var "S/")]))]) ) map5
-   --let map7 = Map.insert "S1" (Functs (If (Equal (Var "target") (Div (Var "inpt") (Num 0))) (Assign (Var "found") (Boolean True)) (Else (Block [Assign (Var "inpt") (Mul (Var "inpt") (Num 1) ) , Do (Var "S1")])))) map6
-   --let map8 = Map.insert "Search" (Functs (Block [Assign (Var "found") (Boolean False), Do (Var "S1")])) map7 -- alagh for case not found
     getCode (Map.empty,Map.empty,Map.empty) g p
