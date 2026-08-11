@@ -33,19 +33,27 @@ Syntax:
 
 Defining new classes:
   Def ObjectName = {x y z .... } 
+  
   class names need to start with a capital letter. By doing that you are creating a new class    with the fields that are in the brackets.
 
 Creating an object:
   let variable : ObjectName
+  
   This creates a variable of type ObjectName
+  
   Fields are initialised as 0 no matter the type you want them to be - their values can be       changed
 
 Editing the fields:
   variable.x <- 1
+  
   print variable.x 
+  
   output: 1
+  
   let newVariable : ObjectName
+  
   print newVariable.x
+  
   output: 0
 
 Features:
