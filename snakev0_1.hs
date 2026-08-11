@@ -17,12 +17,23 @@ import Data.Time
 import qualified Distribution.Compat.Prelude as LocalTime
 import Control.Monad.RWS (evalRWS)
 import Data.Time.Clock.POSIX
+import Distribution.Backpack (DefUnitId)
+import Language.Haskell.TH (varStrictType)
 
 type NonTerminal = String
 type Terminal = String
 
 data Module =
     Module String (Map.Map String Value)
+    deriving(Show,Eq)
+
+data Typedef 
+    =Tdef [Value]
+    deriving(Show,Eq)
+
+data Pair
+    = Pair String Value
+    deriving(Show,Eq)
 
 data Value
   = Int Int
@@ -31,6 +42,8 @@ data Value
   | Arrays AST
   | Bool Bool
   | Arr [Value]
+  | Typedef [AST]
+  | Object String (Map.Map String Value)
   deriving (Show , Eq)
 
 data Token
@@ -63,6 +76,12 @@ data Token
   | TLen
   | TImport
   | TRand
+  | TLPar2
+  | TRPar2
+  | TDef
+  | TwoDots
+  | TLet
+  | TConstruct
   deriving (Show, Eq)
 
 --data Expr
@@ -116,6 +135,9 @@ data AST
     | Length AST
     | Import AST
     | Random AST
+    | Type String [AST]
+    | DType String String
+    | Construct AST AST
     deriving (Show, Eq)
 
 data Stack a = Stack [a]
@@ -186,6 +208,11 @@ toSymbol TReturn    = T "return"
 toSymbol TLen       = T "length"
 toSymbol TImport    = T "import"
 toSymbol TRand      = T "random"
+toSymbol TDef        = T "Def" 
+toSymbol TLPar2     = T "{"
+toSymbol TRPar2     = T "}"
+toSymbol TwoDots    = T ":"
+toSymbol TLet       = T "let"
 
 toSymbol2 :: String -> Symbol
 toSymbol2 "var"  = T "var"
@@ -214,12 +241,17 @@ toSymbol2 "return"= T "return"
 toSymbol2 "length"= T "length"
 toSymbol2 "import"= T "import"
 toSymbol2 "random"= T "random"
+toSymbol2 "{"     = T "{"
+toSymbol2 "}"     = T "}"
+toSymbol2 "Def"   = T "Def"
+toSymbol2 ":"     = T ":"
+toSymbol2 "let"   = T "let"
 
 getTerminals :: [Terminal]
 getTerminals =
     ["var" , "num", "+", "-","*", "/", "<-", "read", "print"
     , "$" ,"", "'", "str", "=", "fdef", "[", "]", "if", "then",
-    "else", "endif", "do", "->", ">", "<", "return", "length", "import", "random"]
+    "else", "endif", "do", "->", ">", "<", "return", "length", "import", "random", "{" ,"}","Def", ":", "let"]
 
 frt :: Grammar -> String -> Int-> Int ->[Terminal]
 frt g sym x y=
@@ -311,6 +343,11 @@ toToken "return"= TReturn
 toToken "length"= TLen
 toToken "import"= TImport
 toToken "random"= TRand
+toToken "{"     = TLPar2
+toToken "}"     = TRPar2
+toToken "Def"   = TDef
+toToken ":"     = TwoDots
+toToken "let"   = TLet
 toToken s
   | isFdef s = TFdef s
   | isNumber s = TNum (read s)
@@ -404,11 +441,15 @@ data Grammar = Grammar
 grammar :: Grammar
 grammar = Grammar "S"
     [("S" , [T "var" , T "<-" , N "expr"]),
+    ("S", [T "Def", T "fdef" , T "=", T "{" , N "Data"]),
     ("S" , [T "->" , T "var"]),
+    ("S" , [T "let" , T "var", T ":" , T "fdef"]),
     --("S" , [T "return" , N "x"]),
     ("S" , [T "do" , T "fdef" , T "[", N "param'"]),
     ("S" , [T "if" , N "expr''" , N "then'"]),
     ("S", [T "import" , T "fdef"]),
+    ("Data", [T "var", N "Data"]),
+    ("Data" , [T "}"]),
     ("then'", [T "then", N "S", N "else'"]),
     ("else'", [T "else", N "S", N "endif'"]),
     ("else'" , [N "S" , T "else'"]),
@@ -453,11 +494,14 @@ grammar = Grammar "S"
 isMarker :: String -> Bool
 isMarker s =  s `elem` ["Mass", "Mfunct", "Mexpr", "Mexpr'", "Mterm",
  "Mterm'", "Mfunctdef", "MArr", "MIf", "MThen",
- "MElse", "MDo", "MS" ,"MGt" , "MLt", "MFree", "MEq" , "MParam", "MReturn", "MLen", "MImp", "MRand"]
+ "MElse", "MDo", "MS" ,"MGt" , "MLt", "MFree", "MEq" , "MParam", "MReturn", "MLen", "MImp", "MRand", "MData" , "MData2", "MLet"]
 
 pushMarker :: Stack String -> [String] -> Stack String
 pushMarker stack rule
   | rule == ["do", "fdef" , "[", "param'"] = push "MDo" stack
+  | rule == [ "Def", "fdef" ,  "=",  "{" ,"Data"] = push "MData" stack
+  | rule == ["var",  "Data"] = push "MData2" stack
+  | rule == ["let" , "var",  ":" ,  "fdef"] = push "MLet" stack
   | rule == ["funct" , "'" , "y", "'"] = push "Mfunct" stack
   | rule == [ "var" ,  "<-" ,  "expr"] = push "Mass" stack
   | rule == [ "funct" , "expr"] = push "Mfunct" stack
@@ -486,7 +530,7 @@ pushMarker stack rule
 
 getNonTerminals :: [NonTerminal]
 getNonTerminals =
-    ["S" , "expr" , "funct" , "multop" , "addop" , "x" , "expr'", "term", "term'", "y", "expr''", "else'", "then'", "='", "endif'", "log", "param'", "x'"]
+    ["S" , "expr" , "funct" , "multop" , "addop" , "x" , "expr'", "term", "term'", "y", "expr''", "else'", "then'", "='", "endif'", "log", "param'", "x'", "Data"]
 
 addRule :: Stack String -> [String] -> Int ->Stack String
 addRule stack rule x
@@ -514,7 +558,25 @@ combine ast marker inpt =
     (a) -> push (Param [a]) ((pop2  ast))
   else if marker == "MRand" then push (Random (fst (pop ast))) (pop2 ast)
   else if marker == "MImp" then push (Import (top ast)) (pop2 ast)
+  else if marker == "MData" then 
+    let (Var name) = top (pop2 ast) in
+    let (Array arr) = top ast in
+    push (Type name arr) ast
+  else if marker == "MData2" then
+    case top ast of
+        (Type name a) -> error(show(ast))
+            --push (Type name (a ++ [top (pop2 ast)])) (pop2 ast)
+        (Array arr) -> case (top (pop2(ast))) of 
+            (Var a) -> push (Array( arr ++ [Var a])) (pop2 (pop2 ast))
+            --_ -> push (Array [Var a]) (pop2 ast)
+            --(Var b) -> push (Type b ([Var a])) (pop2(pop2 ast) )
+            --(Var b) ->
+            --_ -> error(show (ast))
+        (Var a) -> push (Array [(Var a)]) (pop2 ast)
+        a -> error(show (ast))
   else if marker == "MFree" then push (Free (top ast)) (pop2 ast)
+  else if marker == "MLet" then case (top ast, top (pop2 ast)) of
+    (Var var, Var typename) -> push (DType typename var) (pop2(pop2 ast))
   else if marker == "MLen" then push (Length (top ast)) (pop2 ast)
   else if marker == "MElse" then push (Else (fst (pop ast))) (pop2 (pop2 ast))
   else if marker == "Mass" then push (Assign  (fst (pop (pop2 ast))) right) (pop2 (pop2 ast))
@@ -586,9 +648,9 @@ parser0 g s x stack ast inpt s2 p
   | top stack `elem` getTerminals && s!!x == top stack && (top stack == "endif" || top stack == "if" || top stack == "then" || top stack == "do") = parser0 g s (x + 1) (pop2 stack) ast inpt s2 p
   | top stack `elem` getTerminals && s!!x == top stack && isNumber (s2!!x) = parser0 g s (x + 1) (pop2 stack) (push (Num (read (s2!!x))) ast) inpt s2 p-- match int 
   | top stack `elem` getTerminals && s!!x == top stack && isVar (s2!!x) && (s2!!x) /= "length" && (s2!!x /= "do") && (s2!!x /= "random")= parser0 g s (x + 1) (pop2 stack) (push (Var (s2!!x)) ast) inpt s2 p -- match var 
-  | top stack `elem` getTerminals && s!!x == top stack && (s!!x) `elem` ["+", "-" , "*", "/", "print", "read", "=", "return", "length", "do", "import", "random"] = parser0 g s (x + 1) (pop2 stack) ast (push (s2!!x) inpt) s2 p
+  | top stack `elem` getTerminals && s!!x == top stack && (s!!x) `elem` ["+", "-" , "*", "/", "print", "read", "=", "return", "length", "do", "import", "random" , "{"] = parser0 g s (x + 1) (pop2 stack) ast (push (s2!!x) inpt) s2 p
   | top stack `elem` getTerminals && s!!x == top stack = parser0 g s (x + 1) (pop2 stack) ast inpt s2 p-- match anything else 
-  | otherwise = error ("Syntax error at input" ++ show (s) ++ " " ++ "at" ++ "`" ++ (s!!x) ++ "`")
+  | otherwise = error ("Syntax error at input" ++ show (s) ++ " " ++ "at" ++ "`" ++ (s!!x) ++ "`" ++ " " ++ show(x))
 
 forceShow :: Show a => a -> String
 forceShow x = length (show x) `seq` show x
@@ -639,10 +701,10 @@ isNumber2 (Num x) = True
 isNumber2 ast = False
 
 isVar :: String -> Bool
-isVar s = not (any ( `elem` "+-/*^%!@#^&*()=[],;:12>345<67890 '\"") s) && notElem s functs && s /= " " && s /= "" && not ((head s) `elem` "QWERTYUIOPASDFGHJKLZXCVBNM")
+isVar s = not (any ( `elem` "+-/*^%!@#^&*()=[],;:12>345<67890{} '\"") s) && notElem s functs && s /= " " && s /= "" && not ((head s) `elem` "QWERTYUIOPASDFGHJKLZXCVBNM")
 
 isOp :: String -> Bool
-isOp s = s `elem`  ["<-" , "*" , "^" , "+", "-", "/" , "!" , "=", "->" , ">", "<"]
+isOp s = s `elem`  ["<-" , "*" , "^" , "+", "-", "/" , "!" , "=", "->" , ">", "<", "{", "}", ":"]
 
 isFunct :: String -> Bool
 isFunct s = s `elem` functs
@@ -747,6 +809,11 @@ toStringFromToken token = case token of
     DO -> "do"
     TImport -> "import"
     TRand -> "random"
+    TLPar2 -> "{"
+    TRPar2 -> "}"
+    TDef -> "Def"
+    TwoDots -> ":"
+    TLet -> "let"
 
 toStrArray :: [Token] -> Int -> [String]
 toStrArray tokens x
@@ -787,13 +854,20 @@ eval (Sub a b ) map = case (eval a map, eval b map) of
     _ -> Nothing
 eval (Num a) map = Just (Int a)
 eval (Boolean a) map = Just (Bool a)
-eval (Var a) map = case  Map.lookup a map of
-    Just (String a) -> Just (String (filter (`notElem` "'") a))
-    Just (Int a) -> Just (Int a)
-    Just (Functs a b) -> Just (Functs a b)
-    Just (Arrays a) -> Just (Arrays a)
-    Just (Bool a) -> Just (Bool a) 
-    Nothing -> error ("Variable " ++ show(a) ++ " not defined or not in scope")
+eval (Var a) map = if not ('.' `elem` a) then 
+    case  Map.lookup a map of
+        Just (String a) -> Just (String (filter (`notElem` "'") a))
+        Just (Int a) -> Just (Int a)
+        Just (Functs a b) -> Just (Functs a b)
+        Just (Arrays a) -> Just (Arrays a)
+        Just (Bool a) -> Just (Bool a) 
+        Nothing -> error ("Variable " ++ show(a) ++ " not defined or not in scope")
+    else 
+        let var = getModule a in
+        let field_name = getField a in
+        let (Just (Object dtype obj)) = Map.lookup var map in
+        let (Just (field::Value)) = Map.lookup field_name obj in
+        Just field
 eval (Funct a) map = Just (Int 1)
 eval (FunctDef a param b) map = Just (Functs a b)
 eval (Str a) map = Just (String a)
@@ -973,11 +1047,22 @@ compile (Assign a (Do functdef param)) map ftable modules= case ( eval (Do funct
     _ -> case (eval (Do functdef param) ( map)) of
         (Just x) -> return ((Map.delete (getVar a) ( map)),ftable,modules)
         _ -> error (show (eval (Do functdef param) ( map)))
-compile (Assign a b) map ftable modules= case ( eval b ( map)) of
-    (Just y) -> return ((Map.insert (getVar a) y ( map)) ,ftable,modules)
-    _ -> case (eval b ( map)) of
-        (Just x) -> return (Map.delete (getVar a) ( map) , ftable,modules)
-        _ -> error (show (eval b ( map)))
+compile (Assign (Var a) b) map ftable modules= if not ('.' `elem` a) then
+    case ( eval b ( map)) of
+        (Just y) -> return ((Map.insert (a) y ( map)) ,ftable,modules)
+        _ -> case (eval b ( map)) of
+            (Just x) -> return (Map.delete (a) ( map) , ftable,modules)
+            _ -> error (show (eval b ( map)))
+    else
+        let var= getModule a in
+        let field_name = getField a in
+        let (Just (Object dtype obj)) = Map.lookup var map in
+        let (Just (field::Value)) = Map.lookup field_name obj in
+        case ( eval b ( map)) of
+            (Just y) -> return ((Map.insert var (Object dtype (Map.insert field_name y obj)) map) ,ftable,modules)
+            _ -> case (eval b ( map)) of
+                (Just x) -> return (Map.delete (a) ( map) , ftable,modules)
+                _ -> error (show (eval b ( map)))
 compile (Read a) map ftable modules= do
     inpt <- getLine
     if (isNumber inpt) then do
@@ -1064,7 +1149,21 @@ compile (Return a) map ftable modules=
 compile (Import (Var filename)) map ftable modules= do
     r <- compileFile ( filename++ ".txt")
     return (map, ftable, (Map.insert filename r modules))
+compile (Type name vars) map ftable modules = do
+    let newmap = Map.insert name (Typedef  vars) map
+    return (newmap ,ftable, modules)
+compile (DType var dtype) map ftable modules = do
+    let (Just (Typedef vars)) = Map.lookup dtype map
+    let fields = initType vars Map.empty
+    let obj = (Object dtype fields)
+    let newmap = Map.insert var obj map
+    return (newmap,ftable,modules)
 compile ast map ftable modules = error ( "1" ++ show ast ++ "a")
+
+initType :: [AST] ->  Map.Map String Value-> Map.Map String Value
+initType ((Var var):ast) map= 
+    Map.insert  (var) (Int 0) (initType ast map)
+initType ast map = map
 
 getModule :: String -> String
 getModule (x:xs) =
@@ -1073,6 +1172,12 @@ getModule (x:xs) =
     else
         ([x] ++ getModule xs)
 getModule (_:_) = error "no module name where its supposed to be lowkey"
+
+getField :: String -> String
+getField (x:xs) =
+    if x /= '.' then
+        getField xs
+    else xs
 
 toValue :: Maybe Value -> Value
 toValue (Just a) = a
@@ -1176,7 +1281,7 @@ getCode mapp g p = do
             let stack2 = Stack []
             let stack3 = Stack []
             let ing = (parser0 g tokens4 0 stack stack2 stack3 (toStrArray tokens3 0) ) p
-            --print ing
+            print ing
             newmap <- compile ing (fst2 map) (snd2 map) (thrd2 map)
             getCode newmap g p
         else do
