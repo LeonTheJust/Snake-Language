@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
+{- HLINT ignore "Used otherwise as a pattern" -}
 {- HLINT ignore "Use newtype instead of data" -}
 import GHC.Base (VecElem(Int16ElemRep), bindIO)
 import Data.Typeable
@@ -587,8 +588,10 @@ combine ast marker inpt =
         (Var a) -> push (Array [(Var a)]) (pop2 ast)
         a -> error(show (ast))
   else if marker == "MFree" then push (Free (top ast)) (pop2 ast)
-  else if marker == "MLet" then case (top ast, top (pop2 ast), top (pop2(pop2 ast) )) of
-    (Array init,Var var, Var typename) -> push (DType typename var init) (pop2(pop2 (pop2 ast)))
+  else if marker == "MLet" then case (top ast,top (pop2 ast)) of
+    (Array init,Var var) -> case ( top (pop2(pop2 ast) )) of
+        (Var typename) -> push (DType typename var init) (pop2(pop2 (pop2 ast)))
+    (Var var, Var typename) -> push (DType typename var []) (pop2 (pop2 ast))
     otherwise -> error(show(ast))
   --else if marker == "Method" then 
   else if marker == "MLen" then push (Length (top ast)) (pop2 ast)
@@ -1180,6 +1183,7 @@ initType ((Var var):ast) (init : inits) map=
     case init of 
         (Num a) -> Map.insert  (var) (Int a) (initType ast inits map)
         (Str a) -> Map.insert  (var) (String a) (initType ast inits map)
+initType ((Var var):ast) [] map = Map.insert (var) (Int 0) (initType ast [] map)
 initType ast init map = map
 
 getModule :: String -> String
@@ -1321,7 +1325,7 @@ getCode mapp g p = do
             let ing = (parser0 g (tokens2 ++ ["$"]) 0 stack stack2 stack3 (toStrArray tokens 0) ) p
             --print (ing)
             newmap <- compile ing (fst2 map) (snd2 map) (thrd2 map)
-            --print (newmap)
+            print (newmap)
             --print (newmap )
             --print "Do you want to continue? [Y/N]"
             getCode newmap g p
