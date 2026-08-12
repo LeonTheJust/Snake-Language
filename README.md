@@ -1,5 +1,5 @@
 # Snake-Language
-Interpreted programming language written in Haskell, featuring a lexer, LL(1) predictive parser, modules, semantic analysis, ASTs
+Interpreted (almost) Object Oriented programming language written in Haskell, featuring a lexer, LL(1) predictive parser, modules, semantic analysis, ASTs
 
 Snake programming language Snake is implemented in Haskell using an LL(1) predictive parser, recursive AST construction and direct AST interpretation. It also includes an editor to be able to run the code without using the console. Architecture diagram:
 
