@@ -1,11 +1,8 @@
-# Snake-Language
-Interpreted programming language written in Haskell, featuring a lexer, LL(1) predictive parser, modules, semantic analysis, ASTs
+Snake-Language
 
-Snake programming language
-Snake is implemented in Haskell using an LL(1) predictive parser,
-recursive AST construction and direct AST interpretation. It also
-includes an editor to be able to run the code without using the console.
-Architecture diagram:
+Interpreted (almost) Object Oriented programming language written in Haskell, featuring a lexer, LL(1) predictive parser, modules, semantic analysis, ASTs
+
+Snake programming language Snake is implemented in Haskell using an LL(1) predictive parser, recursive AST construction and direct AST interpretation. It also includes an editor to be able to run the code without using the console. Architecture diagram:
 
 Source code (written by the user)
 
@@ -15,36 +12,55 @@ Lexer/Tokeniser (transforms the source code into tokens)
 
 |
 
-Creation of parsing table and LL(1) parsing using a stack with AST creation
-during parsing
+Creation of parsing table and LL(1) parsing using a stack with AST creation during parsing
 
 |
 
-Semantic analysis with type checking and a linker that imports/finds imported
-functions from the three libraries of Snake
+Semantic analysis with type checking and a linker that imports/finds imported functions from the three libraries of Snake
 
 |
 
 Execution of the code
 
-Features:
-- Written entirely in Haskell
-- Handwritten LL(1) recursive descent parser
-- Abstract Syntax Trees (AST)
-- Semantic analysis and basic type checking
-- Basic error handling
-- Interpreter
-- Module import system and libraries written in Snake (StdLib,Math,Arrays)
-- Functions and effective recursion
-- Arrays, strings, integers and booleans
-Editor:
-Simple editor implemented in Java, where you can run Snake programs,
-manage files and see the outputs/errors that your code produces. You can also
-use it to open the libraries and edit them (the same way you would open/edit/
-save any Snake code file) and add your own functions.
-- Standard library written in Snake
-Example programs:
+New feature objects (function as structs for now)!
 
+Syntax:
+
+Defining new classes: Def ObjectName = {x y z .... }
+
+class names need to start with a capital letter. By doing that you are creating a new class with the fields that are in the brackets.
+
+Creating an object: let variable : ObjectName{val1 val2 val3 ...} (constructor with values)
+
+or: let variable : ObjectName{} (empty constructor - all values are set to 0)
+
+This creates a variable of type ObjectName
+
+Editing the fields: variable.x <- 1
+
+print variable.x
+
+output: 1
+
+let newVariable : ObjectName{}
+
+print newVariable.x
+
+output: 0
+
+Features:
+
+Written entirely in Haskell
+Handwritten LL(1) recursive descent parser
+Abstract Syntax Trees (AST)
+Objects/structs (newly added)
+Semantic analysis and basic type checking
+Basic error handling
+Interpreter
+Module import system and libraries written in Snake (StdLib,Math,Arrays)
+Functions and effective recursion
+Arrays, strings, integers and booleans Editor: Simple editor implemented in Java, where you can run Snake programs, manage files and see the outputs/errors that your code produces. You can also use it to open the libraries and edit them (the same way you would open/edit/ save any Snake code file) and add your own functions.
+Standard library written in Snake Example programs:
 1.Factorial calculation:
 
 Factorial [n] -> if n = 0 then return 1
@@ -67,10 +83,8 @@ print Factorial
 
 end
 
->>3628800
-
-2. Even Parity with a randomly generated error for the signal 01101:
-
+3628800
+Even Parity with a randomly generated error for the signal 01101:
 a<- [0] + [1] + [1] + [0] + [1]
 
 Count[signal i sum] -> if i = length signal then return sum else sum<- signal/i +
@@ -130,14 +144,8 @@ endif
 end
 
 Planned features:
-- Structs
-- Optimisations
-- Improved error handling
-- More libraries
-- While loops
-How do I run it?
-If you’re on macOS using an arm architecture chip, you can run the executable
-or run the .app to be able to use the editor.
-Otherwise, if you have Haskell installed on your device you can perform:
-runhaskell snakev0_1.hs
-After opening a terminal in the project folde
+
+Optimisations
+Improved error handling
+More libraries
+How do I run it? If you’re on macOS using an arm architecture chip, you can run the executable or run the .app to be able to use the editor. Otherwise, if you have Haskell installed on your device you can perform: runhaskell snakev0_1.hs After opening a terminal in the project folde

@@ -136,8 +136,9 @@ data AST
     | Import AST
     | Random AST
     | Type String [AST]
-    | DType String String
+    | DType String String [AST]
     | Construct AST AST
+    | Method String AST AST AST -- Name, Type, parameters and statements
     deriving (Show, Eq)
 
 data Stack a = Stack [a]
@@ -443,7 +444,11 @@ grammar = Grammar "S"
     [("S" , [T "var" , T "<-" , N "expr"]),
     ("S", [T "Def", T "fdef" , T "=", T "{" , N "Data"]),
     ("S" , [T "->" , T "var"]),
-    ("S" , [T "let" , T "var", T ":" , T "fdef"]),
+    ("S" , [T "Method" , T "fdef" , T "fdef" , T "='"]),
+    ("S" , [T "let" , T "var", T ":" , T "fdef", N "fdef'"]),
+    ("fdef'" , [T "{" ,N "fdef''"]),
+    ("fdef''" , [T "}"]),
+    ("fdef''" , [N "x" , N "fdef''"]),
     --("S" , [T "return" , N "x"]),
     ("S" , [T "do" , T "fdef" , T "[", N "param'"]),
     ("S" , [T "if" , N "expr''" , N "then'"]),
@@ -494,20 +499,23 @@ grammar = Grammar "S"
 isMarker :: String -> Bool
 isMarker s =  s `elem` ["Mass", "Mfunct", "Mexpr", "Mexpr'", "Mterm",
  "Mterm'", "Mfunctdef", "MArr", "MIf", "MThen",
- "MElse", "MDo", "MS" ,"MGt" , "MLt", "MFree", "MEq" , "MParam", "MReturn", "MLen", "MImp", "MRand", "MData" , "MData2", "MLet"]
+ "MElse", "MDo", "MS" ,"MGt" , "MLt", "MFree", "MEq" , "MParam",
+  "MReturn", "MLen", "MImp", "MRand", "MData" , "MData2", "MLet","MConstruct", "Method"]
 
 pushMarker :: Stack String -> [String] -> Stack String
 pushMarker stack rule
   | rule == ["do", "fdef" , "[", "param'"] = push "MDo" stack
   | rule == [ "Def", "fdef" ,  "=",  "{" ,"Data"] = push "MData" stack
   | rule == ["var",  "Data"] = push "MData2" stack
-  | rule == ["let" , "var",  ":" ,  "fdef"] = push "MLet" stack
+  | rule == ["let" , "var",  ":" ,  "fdef", "fdef'"] = push "MLet" stack
   | rule == ["funct" , "'" , "y", "'"] = push "Mfunct" stack
   | rule == [ "var" ,  "<-" ,  "expr"] = push "Mass" stack
+  | rule == [ "Method" , "fdef" ,  "fdef" ,  "='"] = push "Method" stack
   | rule == [ "funct" , "expr"] = push "Mfunct" stack
   | rule == ["->" , "var"] = push "MFree" stack
   | rule == ["import" , "fdef"] = push "MImp" stack
   | rule == ["random", "expr"] = push "MRand" stack
+  | rule == [ "x" ,  "fdef''"] = push "MConstruct" stack
  -- | rule == ["return"] = push "MReturn" stack
 --  | rule == [ "term",  "expr'"] = push "Mexpr" stack
   | rule == [ "addop" , "term" ,  "expr'" ] = push "Mexpr'" stack
@@ -530,7 +538,7 @@ pushMarker stack rule
 
 getNonTerminals :: [NonTerminal]
 getNonTerminals =
-    ["S" , "expr" , "funct" , "multop" , "addop" , "x" , "expr'", "term", "term'", "y", "expr''", "else'", "then'", "='", "endif'", "log", "param'", "x'", "Data"]
+    ["S" , "expr" , "funct" , "multop" , "addop" , "x" , "expr'", "term", "term'", "y", "expr''", "else'", "then'", "='", "endif'", "log", "param'", "x'", "Data", "fdef'" , "fdef''"]
 
 addRule :: Stack String -> [String] -> Int ->Stack String
 addRule stack rule x
@@ -558,6 +566,10 @@ combine ast marker inpt =
     (a) -> push (Param [a]) ((pop2  ast))
   else if marker == "MRand" then push (Random (fst (pop ast))) (pop2 ast)
   else if marker == "MImp" then push (Import (top ast)) (pop2 ast)
+  else if marker == "MConstruct" then 
+    case top ast of
+        (Array a) -> push (Array (a ++ [top (pop2 ast)])) (pop2 (pop2 ast))
+        ( a) -> push (Array [a]) (pop2 ast)
   else if marker == "MData" then 
     let (Var name) = top (pop2 ast) in
     let (Array arr) = top ast in
@@ -575,8 +587,10 @@ combine ast marker inpt =
         (Var a) -> push (Array [(Var a)]) (pop2 ast)
         a -> error(show (ast))
   else if marker == "MFree" then push (Free (top ast)) (pop2 ast)
-  else if marker == "MLet" then case (top ast, top (pop2 ast)) of
-    (Var var, Var typename) -> push (DType typename var) (pop2(pop2 ast))
+  else if marker == "MLet" then case (top ast, top (pop2 ast), top (pop2(pop2 ast) )) of
+    (Array init,Var var, Var typename) -> push (DType typename var init) (pop2(pop2 (pop2 ast)))
+    otherwise -> error(show(ast))
+  --else if marker == "Method" then 
   else if marker == "MLen" then push (Length (top ast)) (pop2 ast)
   else if marker == "MElse" then push (Else (fst (pop ast))) (pop2 (pop2 ast))
   else if marker == "Mass" then push (Assign  (fst (pop (pop2 ast))) right) (pop2 (pop2 ast))
@@ -1150,20 +1164,23 @@ compile (Import (Var filename)) map ftable modules= do
     r <- compileFile ( filename++ ".txt")
     return (map, ftable, (Map.insert filename r modules))
 compile (Type name vars) map ftable modules = do
+   -- print(map)
     let newmap = Map.insert name (Typedef  vars) map
     return (newmap ,ftable, modules)
-compile (DType var dtype) map ftable modules = do
+compile (DType var dtype a) map ftable modules = do
     let (Just (Typedef vars)) = Map.lookup dtype map
-    let fields = initType vars Map.empty
+    let fields = initType vars a Map.empty
     let obj = (Object dtype fields)
     let newmap = Map.insert var obj map
     return (newmap,ftable,modules)
 compile ast map ftable modules = error ( "1" ++ show ast ++ "a")
 
-initType :: [AST] ->  Map.Map String Value-> Map.Map String Value
-initType ((Var var):ast) map= 
-    Map.insert  (var) (Int 0) (initType ast map)
-initType ast map = map
+initType :: [AST] -> [AST] -> Map.Map String Value-> Map.Map String Value
+initType ((Var var):ast) (init : inits) map= 
+    case init of 
+        (Num a) -> Map.insert  (var) (Int a) (initType ast inits map)
+        (Str a) -> Map.insert  (var) (String a) (initType ast inits map)
+initType ast init map = map
 
 getModule :: String -> String
 getModule (x:xs) =
