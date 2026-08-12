@@ -1,6 +1,5 @@
-Snake-Language
-
-Interpreted (almost) Object Oriented programming language written in Haskell, featuring a lexer, LL(1) predictive parser, modules, semantic analysis, ASTs
+# Snake-Language
+Interpreted programming language written in Haskell, featuring a lexer, LL(1) predictive parser, modules, semantic analysis, ASTs
 
 Snake programming language Snake is implemented in Haskell using an LL(1) predictive parser, recursive AST construction and direct AST interpretation. It also includes an editor to be able to run the code without using the console. Architecture diagram:
 
@@ -48,19 +47,53 @@ print newVariable.x
 
 output: 0
 
-Features:
+New feature objects (function as structs for now)!
 
-Written entirely in Haskell
-Handwritten LL(1) recursive descent parser
-Abstract Syntax Trees (AST)
-Objects/structs (newly added)
-Semantic analysis and basic type checking
-Basic error handling
-Interpreter
-Module import system and libraries written in Snake (StdLib,Math,Arrays)
-Functions and effective recursion
-Arrays, strings, integers and booleans Editor: Simple editor implemented in Java, where you can run Snake programs, manage files and see the outputs/errors that your code produces. You can also use it to open the libraries and edit them (the same way you would open/edit/ save any Snake code file) and add your own functions.
-Standard library written in Snake Example programs:
+Syntax: 
+
+Defining new classes:
+  Def ObjectName = {x y z .... } 
+  
+  class names need to start with a capital letter. By doing that you are creating a new class    with the fields that are in the brackets.
+
+Creating an object:
+  let variable : ObjectName
+  
+  This creates a variable of type ObjectName
+  
+  Fields are initialised as 0 no matter the type you want them to be - their values can be       changed
+
+Editing the fields:
+  variable.x <- 1
+  
+  print variable.x 
+  
+  output: 1
+  
+  let newVariable : ObjectName
+  
+  print newVariable.x
+  
+  output: 0
+
+Features:
+- Written entirely in Haskell
+- Handwritten LL(1) recursive descent parser
+- Abstract Syntax Trees (AST)
+- Semantic analysis and basic type checking
+- Basic error handling
+- Interpreter
+- Module import system and libraries written in Snake (StdLib,Math,Arrays)
+- Functions and effective recursion
+- Arrays, strings, integers and booleans
+Editor:
+Simple editor implemented in Java, where you can run Snake programs,
+manage files and see the outputs/errors that your code produces. You can also
+use it to open the libraries and edit them (the same way you would open/edit/
+save any Snake code file) and add your own functions.
+- Standard library written in Snake
+Example programs:
+
 1.Factorial calculation:
 
 Factorial [n] -> if n = 0 then return 1
@@ -148,4 +181,4 @@ Planned features:
 Optimisations
 Improved error handling
 More libraries
-How do I run it? If you’re on macOS using an arm architecture chip, you can run the executable or run the .app to be able to use the editor. Otherwise, if you have Haskell installed on your device you can perform: runhaskell snakev0_1.hs After opening a terminal in the project folde
+How do I run it? If you’re on macOS using an arm architecture chip, you can run the executable or run the .app to be able to use the editor. Otherwise, if you have Haskell installed on your device you can perform: runhaskell snakev0_1.hs After opening a terminal in the project folder
