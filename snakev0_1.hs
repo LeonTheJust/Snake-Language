@@ -984,6 +984,7 @@ foundStr s map = case Map.lookup s map of
     Just s -> True
     Nothing -> False
 
+
 isStr2 :: Maybe Value -> Bool
 isStr2 (Just (String s)) = True
 isStr2 v = False
