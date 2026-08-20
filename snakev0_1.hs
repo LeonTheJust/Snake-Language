@@ -878,7 +878,9 @@ eval (Var a) map = if not ('.' `elem` a) then
         Just (Functs a b) -> Just (Functs a b)
         Just (Arrays a) -> Just (Arrays a)
         Just (Bool a) -> Just (Bool a) 
+        Just (Object a fields) -> Just (Object a fields)
         Nothing -> error ("Variable " ++ show(a) ++ " not defined or not in scope")
+        x -> error(show(x))
     else 
         let var = getModule a in
         let field_name = getField a in
@@ -1326,7 +1328,7 @@ getCode mapp g p = do
             let ing = (parser0 g (tokens2 ++ ["$"]) 0 stack stack2 stack3 (toStrArray tokens 0) ) p
             --print (ing)
             newmap <- compile ing (fst2 map) (snd2 map) (thrd2 map)
-            print (newmap)
+            --print (newmap)
             --print (newmap )
             --print "Do you want to continue? [Y/N]"
             getCode newmap g p
