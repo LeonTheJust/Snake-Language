@@ -865,14 +865,21 @@ eval (Add a b ) map = case (eval a map, eval b map) of
     (Just (String x), Just (String y)) -> Just (String ( (filter (`notElem` "'") ( x ++ y))))
     (Just (Arrays(Array a)) , Just (Arrays (Array b)) ) -> Just (Arrays (Array (a ++ b)))
     (Just (Arrays(Array a)) , Just (Int b) ) -> Just (Arrays (Array (a ++ [Num b])))
+    --(Just (Arrays (Array a)) , Just (Object b c)) -> Just (Arrays (Array (a ++ [Object b c])))
     _ -> Nothing
 eval (Sub a b ) map = case (eval a map, eval b map) of
     (Just (Int x), Just (Int y)) -> Just (Int (x - y))
     _ -> Nothing
 eval (Num a) map = Just (Int a)
 eval (Boolean a) map = Just (Bool a)
-eval (Var a) map = if not ('.' `elem` a) then 
-    case  Map.lookup a map of
+eval (Var a) map = if  ('.' `elem` a) && ((head a) `elem` "abcdefghijklmnopqrstuvwxyz") then 
+    let var = getModule a in
+        let field_name = getField a in
+        let (Just (Object dtype obj)) = Map.lookup var map in
+        let (Just (field::Value)) = Map.lookup field_name obj in
+        Just field
+    else 
+        case  Map.lookup a map of
         Just (String a) -> Just (String (filter (`notElem` "'") a))
         Just (Int a) -> Just (Int a)
         Just (Functs a b) -> Just (Functs a b)
@@ -881,12 +888,6 @@ eval (Var a) map = if not ('.' `elem` a) then
         Just (Object a fields) -> Just (Object a fields)
         Nothing -> error ("Variable " ++ show(a) ++ " not defined or not in scope")
         x -> error(show(x))
-    else 
-        let var = getModule a in
-        let field_name = getField a in
-        let (Just (Object dtype obj)) = Map.lookup var map in
-        let (Just (field::Value)) = Map.lookup field_name obj in
-        Just field
 eval (Funct a) map = Just (Int 1)
 eval (FunctDef a param b) map = Just (Functs a b)
 eval (Str a) map = Just (String a)
@@ -1175,19 +1176,24 @@ compile (Type name vars) map ftable modules = do
     return (newmap ,ftable, modules)
 compile (DType var dtype a) map ftable modules = do
     let (Just (Typedef vars)) = Map.lookup dtype map
-    let fields = initType vars a Map.empty
+    let fields = initType vars a Map.empty map
     let obj = (Object dtype fields)
     let newmap = Map.insert var obj map
     return (newmap,ftable,modules)
 compile ast map ftable modules = error ( "1" ++ show ast ++ "a")
 
-initType :: [AST] -> [AST] -> Map.Map String Value-> Map.Map String Value
-initType ((Var var):ast) (init : inits) map= 
+initType :: [AST] -> [AST] -> Map.Map String Value->Map.Map String Value-> Map.Map String Value
+initType ((Var var):ast) (init : inits) map valuetable= 
     case init of 
-        (Num a) -> Map.insert  (var) (Int a) (initType ast inits map)
-        (Str a) -> Map.insert  (var) (String a) (initType ast inits map)
-initType ((Var var):ast) [] map = Map.insert (var) (Int 0) (initType ast [] map)
-initType ast init map = map
+        (Num a) -> Map.insert  (var) (Int a) (initType ast inits map valuetable)
+        (Str a) -> Map.insert  (var) (String a) (initType ast inits map valuetable)
+        (Var a) -> 
+            let (Just k)= (Map.lookup a valuetable) in
+                Map.insert (var) k (initType ast inits map valuetable)
+        otherwise -> error (show init)
+        --(DType a b c) -> Map.insert (var) (Object a b c) (initType ast inits map)
+initType ((Var var):ast) [] map valuetable = Map.insert (var) (Int 0) (initType ast [] map valuetable)
+initType ast init map valuetable= map
 
 getModule :: String -> String
 getModule (x:xs) =
@@ -1195,13 +1201,14 @@ getModule (x:xs) =
         ""
     else
         ([x] ++ getModule xs)
-getModule (_:_) = error "no module name where its supposed to be lowkey"
+getModule _ = error "no module name where its supposed to be lowkey"
 
 getField :: String -> String
 getField (x:xs) =
     if x /= '.' then
         getField xs
     else xs
+getField _ = ""
 
 toValue :: Maybe Value -> Value
 toValue (Just a) = a
